@@ -1,27 +1,29 @@
 # -*- coding: utf-8 -*-
 """
 角色头像圆形裁剪工具
-- 读取 output/raw/char_icons_all/ 的原始方形 PNG
+- 读取 output/ 目录的原始方形 PNG
 - 裁剪为圆形 PNG
-- 输出到 output/char_icons_all/ 和 output/{domain}/
+- 输出到 output/cropped/
 """
 
 import os
-import sys
 from io import BytesIO
 from PIL import Image, ImageDraw
 
 # ===== 配置 =====
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-RAW_DIR = os.path.join(BASE_DIR, "output", "raw", "char_icons_all")
-RAW_MIHOYO = os.path.join(BASE_DIR, "output", "raw", "upload-os-bbs_mihoyo_com")
-RAW_HOYOWIKI = os.path.join(BASE_DIR, "output", "raw", "upload-static_hoyoverse_com")
-
 OUT_DIR = os.path.join(BASE_DIR, "output")
-OUT_ALL = os.path.join(OUT_DIR, "char_icons_all")
-OUT_MIHOYO = os.path.join(OUT_DIR, "upload-os-bbs_mihoyo_com")
-OUT_HOYOWIKI = os.path.join(OUT_DIR, "upload-static_hoyoverse_com")
+
+# 源（原始文件）
+SRC_ALL = os.path.join(OUT_DIR, "char_icons_all")
+SRC_MIHOYO = os.path.join(OUT_DIR, "upload-os-bbs_mihoyo_com")
+SRC_HOYOWIKI = os.path.join(OUT_DIR, "upload-static_hoyoverse_com")
+
+# 目标（裁剪后）
+CROP_DIR = os.path.join(OUT_DIR, "cropped")
+DST_ALL = os.path.join(CROP_DIR, "char_icons_all")
+DST_MIHOYO = os.path.join(CROP_DIR, "upload-os-bbs_mihoyo_com")
+DST_HOYOWIKI = os.path.join(CROP_DIR, "upload-static_hoyoverse_com")
 
 
 def crop_circle(img_data: bytes) -> BytesIO:
@@ -79,9 +81,9 @@ def main():
     print("=" * 50)
 
     tasks = [
-        (RAW_ALL := os.path.join(RAW_DIR), OUT_ALL, "char_icons_all"),
-        (RAW_MIHOYO, OUT_MIHOYO, "upload-os-bbs_mihoyo_com"),
-        (RAW_HOYOWIKI, OUT_HOYOWIKI, "upload-static_hoyoverse_com"),
+        (SRC_ALL, DST_ALL, "char_icons_all"),
+        (SRC_MIHOYO, DST_MIHOYO, "upload-os-bbs_mihoyo_com"),
+        (SRC_HOYOWIKI, DST_HOYOWIKI, "upload-static_hoyoverse_com"),
     ]
 
     total_ok = total_fail = 0
@@ -94,7 +96,7 @@ def main():
 
     print(f"\n{'=' * 50}")
     print(f"  完成！总计 {total_ok} 成功, {total_fail} 失败")
-    print(f"  输出目录: {OUT_ALL}")
+    print(f"  输出目录: {CROP_DIR}")
     print(f"{'=' * 50}")
 
 

@@ -3,7 +3,7 @@
 原神角色头像下载脚本（原始数据）
 - 从 API 获取角色数据 → 提取 mihoyo_icon / hoyowiki_icon
 - 下载原始图片并验证有效性
-- 按域名分文件夹输出到 output/raw/
+- 按域名分文件夹输出到 output/
 - 圆角裁剪请使用 crop_circle.py
 """
 
@@ -26,7 +26,7 @@ API_HEADERS = {
 }
 
 CHAR_LIST_FILE = os.path.join(BASE_DIR, "data", "character_names.txt")
-OUTPUT_DIR = os.path.join(BASE_DIR, "output", "raw")
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 TIMEOUT = 5
 INTERVAL = 0.1
 

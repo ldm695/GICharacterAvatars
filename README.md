@@ -1,58 +1,67 @@
 # Genshin Character Icons
 
-原神角色头像下载 & 裁剪工具 — 从 genshin-db API 获取角色头像，可选裁剪为圆形 PNG。
+原神角色头像下载 & 裁剪工具 — 从 [genshin-db-api](https://github.com/theBowja/genshin-db-api) 获取角色头像，可选裁剪为圆形 PNG。
 
-## 架构
+## 快速开始
 
+```bash
+pip install -r requirements.txt
+python run.py
 ```
-fetch_char_icons.py    # 下载原始头像（无处理）→ output/raw/
-       ↓
-crop_circle.py         # 圆形裁剪（从 raw/ 读取 → 输出）
-       ↓
-output/char_icons_all/ # 最终圆形裁剪头像（供 App 使用）
-```
+
+`run.py` 会依次询问：
+1. **拉取原始头像** — 从 genshin-db API 下载全部角色
+2. **拉取临时链接** — 补档 sandrone/lohen 等 API 无图的角色（来自 Fandom Wiki）
+3. **圆形裁剪** — 将原始方形头像裁剪为圆形 → `output/cropped/`
 
 ## 目录结构
 
 ```
 gi-character-avatars/
-├── fetch_char_icons.py          # 原始头像下载（0.1s 间隔，5s 超时）
-├── crop_circle.py               # 圆形裁剪（独立步骤）
-├── gen_avatar_sql.py            # 生成 SQL UPDATE 语句
-├── character_icon_mapping.json  # 角色名 → 文件名映射
-├── data/character_names.txt     # 118 个可玩角色英文名
+├── run.py                               # 总入口（自动化流程）
+├── fetch_char_icons.py                  # 原始头像下载（0.1s 间隔，5s 超时）
+├── crop_circle.py                       # 圆形裁剪（独立步骤）
+├── gen_avatar_sql.py                    # 生成 SQL UPDATE 语句
+├── character_icon_mapping.json          # 角色名 → 文件名映射
+├── data/
+│   ├── character_names.txt              # 118 个可玩角色英文名
+│   └── fallback_urls.json               # 临时/备用链接（可能随版本变动）
 ├── requirements.txt
 └── output/
-    ├── raw/                              # 原始方形 PNG（下载产物）
-    │   ├── char_icons_all/               #   113 张整合版
-    │   ├── upload-os-bbs_mihoyo_com/     #   65 张（米游社源）
-    │   └── upload-static_hoyoverse_com/  #   113 张（HoYoWiki 源）
-    ├── char_icons_all/                   # 圆形裁剪版（117 张，含旅行者/Aloy 本地归档）
-    ├── upload-os-bbs_mihoyo_com/         # 圆形裁剪 65 张
-    └── upload-static_hoyoverse_com/      # 圆形裁剪 113 张
+    ├── char_icons_all/                  # 原始方形（整合版，mihoyo 优先）
+    ├── upload-os-bbs_mihoyo_com/        # 米游社源
+    ├── upload-static_hoyoverse_com/     # HoYoWiki 源
+    └── cropped/                         # 圆形裁剪版（由 crop_circle.py 生成）
+        ├── char_icons_all/
+        ├── upload-os-bbs_mihoyo_com/
+        └── upload-static_hoyoverse_com/
 ```
 
-## 使用
+## 分步使用
 
 ```bash
-# 1. 安装依赖
-pip install -r requirements.txt
-
-# 2. 下载原始头像（存到 output/raw/）
+# 1. 下载原始头像
 python fetch_char_icons.py
 
-# 3. 整合原始头像（mihoyo 优先 → hoyowiki 兜底）
-python -c "import os,shutil; B='output/raw'; A=os.path.join(B,'char_icons_all'); M=os.path.join(B,'upload-os-bbs_mihoyo_com'); H=os.path.join(B,'upload-static_hoyoverse_com'); os.makedirs(A,exist_ok=True); [shutil.copy2(os.path.join(d,f),os.path.join(A,f)) for d in [M,H] if os.path.isdir(d) for f in os.listdir(d) if f.endswith('.png') and not os.path.isfile(os.path.join(A,f))]"
+# 2. 整合（mihoyo 优先 → hoyoverse 兜底）
+python -c "import os, shutil; O='output'; [shutil.copy2(os.path.join(d,f),os.path.join(O,'char_icons_all',f)) for d in [os.path.join(O,'upload-os-bbs_mihoyo_com'),os.path.join(O,'upload-static_hoyoverse_com')] if os.path.isdir(d) for f in os.listdir(d) if f.endswith('.png') and not os.path.isfile(os.path.join(O,'char_icons_all',f))]"
 
-# 4. 裁剪为圆形（从 raw/ 读取 → 输出到 output/）
+# 3. 裁剪为圆形
 python crop_circle.py
 ```
 
 ## 说明
 
 - 角色列表截至原神 **6.7** 版本，共 **118** 个可玩角色
-- API: [genshin-db](https://github.com/theBowja/genshin-db)
+- API: [genshin-db-api](https://github.com/theBowja/genshin-db-api) (genshin-db v5)
 - `fetch_char_icons.py` 每 0.1 秒请求一个角色，超时 5 秒
 - 优先使用 `mihoyo_icon`，兜底使用 `hoyowiki_icon`
-- aether/lumine（旅行者）和 aloy（跨界角色）API 无数据，使用本地归档
-- sandrone（桑多涅）API 有数据但无图标字段，跳过
+- aether/lumine（旅行者）使用米游社源，HoYoWiki 共享源合并为 `traveler.png`
+- aloy（跨界角色）API 有数据
+- sandrone（桑多涅）API 无图标字段，需从 fallback_urls.json 补档
+- lohen（HoYoWiki 图标可能变动）也列在 fallback_urls.json
+
+## 数据来源
+
+- [genshin-db-api](https://github.com/theBowja/genshin-db-api) — 角色数据与图标 URL
+- [Genshin Impact Fandom Wiki](https://genshin-impact.fandom.com/wiki/Character) — 备用的 sandrone/lohen 图标
