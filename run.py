@@ -5,7 +5,7 @@
 ─────────────────────────────
 流程:
   1. 从 genshin-db API 拉取全部角色原始头像
-  2. 按 mihoyo 优先 → hoyoverse 兜底整合为 char_icons_all
+  2. 按 mihoyo 优先 → hoyoverse 兜底整合为 avatars_all
   3. 可选：拉取临时链接（sandrone / lohen 等来自 Fandom）
   4. 可选：圆形裁剪 → output/cropped/
 """
@@ -20,7 +20,7 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
 sys.path.insert(0, BASE_DIR)
 
-FETCH_SCRIPT = os.path.join(BASE_DIR, "fetch_char_icons.py")
+FETCH_SCRIPT = os.path.join(BASE_DIR, "fetch_avatars.py")
 CROP_SCRIPT = os.path.join(BASE_DIR, "crop_circle.py")
 FALLBACK_FILE = os.path.join(BASE_DIR, "data", "fallback_urls.json")
 
@@ -37,14 +37,14 @@ def confirm(prompt: str) -> bool:
 
 
 def merge_raw_icons():
-    """将 domain 分目录的原始头像整合到 char_icons_all（mihoyo 优先）"""
-    print("\n── 整合原始头像到 char_icons_all ──")
+    """将 domain 分目录的原始头像整合到 avatars_all（mihoyo 优先）"""
+    print("\n── 整合原始头像到 avatars_all ──")
 
     src_dirs = {
         "upload-os-bbs_mihoyo_com": os.path.join(OUTPUT_DIR, "upload-os-bbs_mihoyo_com"),
         "upload-static_hoyoverse_com": os.path.join(OUTPUT_DIR, "upload-static_hoyoverse_com"),
     }
-    dst_dir = os.path.join(OUTPUT_DIR, "char_icons_all")
+    dst_dir = os.path.join(OUTPUT_DIR, "avatars_all")
     os.makedirs(dst_dir, exist_ok=True)
 
     # 收集所有角色名
@@ -63,7 +63,7 @@ def merge_raw_icons():
         dst = os.path.join(dst_dir, name)
         shutil.copy2(src, dst)
 
-    print(f"  完成：{len(all_names)} 个头像已整合到 char_icons_all")
+    print(f"  完成：{len(all_names)} 个头像已整合到 avatars_all")
 
 
 def fetch_fallback():
@@ -119,7 +119,7 @@ def fetch_fallback():
         except Exception as e:
             print(f"失败 — {e}")
 
-    print("  临时链接拉取完成（重新整合 char_icons_all）")
+    print("  临时链接拉取完成（重新整合 avatars_all）")
 
 
 def main():
@@ -129,7 +129,7 @@ def main():
     print("=" * 55)
     print(f"\n角色列表: data/character_names.txt ({sum(1 for _ in open(os.path.join(BASE_DIR, 'data', 'character_names.txt'), encoding='utf-8') if _.strip())} 个角色)")
     print(f"输出目录: {OUTPUT_DIR}/")
-    print(f"  ├── char_icons_all/        原始方形（整合版，mihoyo 优先）")
+    print(f"  ├── avatars_all/        原始方形（整合版，mihoyo 优先）")
     print(f"  ├── upload-os-bbs_mihoyo_com/  米游社源")
     print(f"  ├── upload-static_hoyoverse_com/  HoYoWiki 源")
     print(f"  └── cropped/               圆形裁剪版（可选）")
@@ -172,8 +172,8 @@ def main():
     # 完成
     print("\n" + "=" * 55)
     print("  全部完成！")
-    print(f"  原始方形: {OUTPUT_DIR}/char_icons_all/")
-    print(f"  圆形裁剪: {os.path.join(OUTPUT_DIR, 'cropped', 'char_icons_all')}/")
+    print(f"  原始方形: {OUTPUT_DIR}/avatars_all/")
+    print(f"  圆形裁剪: {os.path.join(OUTPUT_DIR, 'cropped', 'avatars_all')}/")
     print("=" * 55)
 
 

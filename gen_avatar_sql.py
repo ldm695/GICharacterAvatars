@@ -1,9 +1,9 @@
-import json, re
+import json, re, os
 
-with open(r'D:\Projects\CustomProjects\GINoteMax\gi_character_icons\character_icon_mapping.json', encoding='utf-8') as f:
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'avatar_mapping.json'), encoding='utf-8') as f:
     mapping = json.load(f)
 
-seedpath = r'D:\Projects\CustomProjects\GINoteMax\gi-note-server\src\main\resources\db\seed.sql'
+seedpath = r'D:\Projects\_Custom\GINoteMax\gi-note-server\src\main\resources\db\seed.sql'
 pattern = re.compile(r"INSERT INTO characters \(id, name, abbr, rarity, release_date, status\) VALUES \((\d+), '([^']+)', '([^']+)',")
 
 names = {}
@@ -32,7 +32,7 @@ lines.append(f'-- 匹配失败: {len(unmatched)}')
 for n in unmatched:
     lines.append(f'--   {n}')
 
-outpath = r'D:\Projects\CustomProjects\GINoteMax\gi-note-server\src\main\resources\db\update_avatar_url.sql'
+outpath = r'D:\Projects\_Custom\GINoteMax\gi-note-server\src\main\resources\db\update_avatar_url.sql'
 with open(outpath, 'w', encoding='utf-8') as f:
     f.write('\n'.join(lines))
 

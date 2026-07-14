@@ -17,22 +17,22 @@ python run.py
 ## 目录结构
 
 ```
-gi-character-avatars/
+character-avatars/
 ├── run.py                               # 总入口（自动化流程）
-├── fetch_char_icons.py                  # 原始头像下载（0.1s 间隔，5s 超时）
+├── fetch_avatars.py                  # 原始头像下载（0.1s 间隔，5s 超时）
 ├── crop_circle.py                       # 圆形裁剪（独立步骤）
 ├── gen_avatar_sql.py                    # 生成 SQL UPDATE 语句
-├── character_icon_mapping.json          # 角色名 → 文件名映射
+├── avatar_mapping.json          # 角色名 → 文件名映射
 ├── data/
 │   ├── character_names.txt              # 118 个可玩角色英文名
 │   └── fallback_urls.json               # 临时/备用链接（可能随版本变动）
 ├── requirements.txt
 └── output/
-    ├── char_icons_all/                  # 原始方形（整合版，mihoyo 优先）
+    ├── avatars_all/                  # 原始方形（整合版，mihoyo 优先）
     ├── upload-os-bbs_mihoyo_com/        # 米游社源
     ├── upload-static_hoyoverse_com/     # HoYoWiki 源
     └── cropped/                         # 圆形裁剪版（由 crop_circle.py 生成）
-        ├── char_icons_all/
+        ├── avatars_all/
         ├── upload-os-bbs_mihoyo_com/
         └── upload-static_hoyoverse_com/
 ```
@@ -41,10 +41,10 @@ gi-character-avatars/
 
 ```bash
 # 1. 下载原始头像
-python fetch_char_icons.py
+python fetch_avatars.py
 
 # 2. 整合（mihoyo 优先 → hoyoverse 兜底）
-python -c "import os, shutil; O='output'; [shutil.copy2(os.path.join(d,f),os.path.join(O,'char_icons_all',f)) for d in [os.path.join(O,'upload-os-bbs_mihoyo_com'),os.path.join(O,'upload-static_hoyoverse_com')] if os.path.isdir(d) for f in os.listdir(d) if f.endswith('.png') and not os.path.isfile(os.path.join(O,'char_icons_all',f))]"
+python -c "import os, shutil; O='output'; [shutil.copy2(os.path.join(d,f),os.path.join(O,'avatars_all',f)) for d in [os.path.join(O,'upload-os-bbs_mihoyo_com'),os.path.join(O,'upload-static_hoyoverse_com')] if os.path.isdir(d) for f in os.listdir(d) if f.endswith('.png') and not os.path.isfile(os.path.join(O,'avatars_all',f))]"
 
 # 3. 裁剪为圆形
 python crop_circle.py
@@ -54,7 +54,7 @@ python crop_circle.py
 
 - 角色列表截至原神 **6.7** 版本，共 **118** 个可玩角色
 - API: [genshin-db-api](https://github.com/theBowja/genshin-db-api) (genshin-db v5)
-- `fetch_char_icons.py` 每 0.1 秒请求一个角色，超时 5 秒
+- `fetch_avatars.py` 每 0.1 秒请求一个角色，超时 5 秒
 - 优先使用 `mihoyo_icon`，兜底使用 `hoyowiki_icon`
 - aether/lumine（旅行者）使用米游社源，HoYoWiki 共享源合并为 `traveler.png`
 - aloy（跨界角色）API 有数据

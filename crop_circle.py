@@ -15,13 +15,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(BASE_DIR, "output")
 
 # 源（原始文件）
-SRC_ALL = os.path.join(OUT_DIR, "char_icons_all")
+SRC_ALL = os.path.join(OUT_DIR, "avatars_all")
 SRC_MIHOYO = os.path.join(OUT_DIR, "upload-os-bbs_mihoyo_com")
 SRC_HOYOWIKI = os.path.join(OUT_DIR, "upload-static_hoyoverse_com")
 
 # 目标（裁剪后）
 CROP_DIR = os.path.join(OUT_DIR, "cropped")
-DST_ALL = os.path.join(CROP_DIR, "char_icons_all")
+DST_ALL = os.path.join(CROP_DIR, "avatars_all")
 DST_MIHOYO = os.path.join(CROP_DIR, "upload-os-bbs_mihoyo_com")
 DST_HOYOWIKI = os.path.join(CROP_DIR, "upload-static_hoyoverse_com")
 
@@ -81,7 +81,7 @@ def main():
     print("=" * 50)
 
     tasks = [
-        (SRC_ALL, DST_ALL, "char_icons_all"),
+        (SRC_ALL, DST_ALL, "avatars_all"),
         (SRC_MIHOYO, DST_MIHOYO, "upload-os-bbs_mihoyo_com"),
         (SRC_HOYOWIKI, DST_HOYOWIKI, "upload-static_hoyoverse_com"),
     ]
