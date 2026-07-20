@@ -28,9 +28,10 @@ character-avatars/
 │   └── fallback_urls.json               # 临时/备用链接（可能随版本变动）
 ├── requirements.txt
 └── output/
-    ├── avatars_all/                  # 原始方形（整合版，mihoyo 优先）
-    ├── upload-os-bbs_mihoyo_com/        # 米游社源
-    ├── upload-static_hoyoverse_com/     # HoYoWiki 源
+    ├── raw/                             # 原始方形
+    │   ├── avatars_all/                 # 整合版（mihoyo 优先）
+    │   ├── upload-os-bbs_mihoyo_com/    # 米游社源
+    │   └── upload-static_hoyoverse_com/ # HoYoWiki 源
     └── cropped/                         # 圆形裁剪版（由 crop_circle.py 生成）
         ├── avatars_all/
         ├── upload-os-bbs_mihoyo_com/
@@ -44,7 +45,7 @@ character-avatars/
 python fetch_avatars.py
 
 # 2. 整合（mihoyo 优先 → hoyoverse 兜底）
-python -c "import os, shutil; O='output'; [shutil.copy2(os.path.join(d,f),os.path.join(O,'avatars_all',f)) for d in [os.path.join(O,'upload-os-bbs_mihoyo_com'),os.path.join(O,'upload-static_hoyoverse_com')] if os.path.isdir(d) for f in os.listdir(d) if f.endswith('.png') and not os.path.isfile(os.path.join(O,'avatars_all',f))]"
+python -c "import os, shutil; O='output/raw'; [shutil.copy2(os.path.join(d,f),os.path.join(O,'avatars_all',f)) for d in [os.path.join(O,'upload-os-bbs_mihoyo_com'),os.path.join(O,'upload-static_hoyoverse_com')] if os.path.isdir(d) for f in os.listdir(d) if f.endswith('.png') and not os.path.isfile(os.path.join(O,'avatars_all',f))]"
 
 # 3. 裁剪为圆形
 python crop_circle.py

@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-原神角色头像下载脚本（原始数据）
-- 从 API 获取角色数据 → 提取 mihoyo_icon / hoyowiki_icon
-- 下载原始图片并验证有效性（并发 + 连接复用）
-- 按域名分文件夹输出到 output/
-- 圆角裁剪请使用 crop_circle.py
+Genshin Impact character avatar downloader (raw data).
+- Fetch character data from the API -> extract mihoyo_icon / hoyowiki_icon
+- Download raw images and verify validity (concurrent + connection reuse)
+- Output to output/, grouped by domain
+- For circle cropping, use crop_circle.py
 """
 
 import os
@@ -17,23 +16,23 @@ from common import (
     API_HEADERS,
     HOYOWIKI_LABEL,
     MIHOYO_LABEL,
-    OUTPUT_DIR,
+    RAW_DIR,
     DEFAULT_TIMEOUT,
     download_and_verify,
     make_session,
     read_character_names,
 )
 
-# ===== 配置 =====
+# ===== Config =====
 API_URL_TEMPLATE = "https://genshin-db-api.vercel.app/api/v5/characters?query={name}"
 MAX_WORKERS = 8
 
-# API 不识别全名时的降级查询名
+# Fallback query names for when the API does not recognize the full name
 NAME_ALIAS = {
     "naganaharayoimiya": "yoimiya",
 }
 
-# 图标 key → (输出子目录, 统计短名)
+# icon key -> (output subdirectory, stats short name)
 ICON_SOURCES = [
     ("mihoyo_icon", MIHOYO_LABEL, "mihoyo"),
     ("hoyowiki_icon", HOYOWIKI_LABEL, "hoyowiki"),
@@ -41,7 +40,7 @@ ICON_SOURCES = [
 
 
 def fetch_character_data(name: str, session: requests.Session) -> dict | None:
-    """查询角色数据，全名失败则尝试别名。"""
+    """Query character data; if the full name fails, try the alias."""
     attempts = [name]
     if name in NAME_ALIAS:
         attempts.append(NAME_ALIAS[name])
@@ -61,8 +60,8 @@ def fetch_character_data(name: str, session: requests.Session) -> dict | None:
 
 def process_character(name: str, session: requests.Session) -> dict:
     """
-    处理单个角色：查数据 → 下载各来源图标 → 保存。
-    返回结果字典，供主线程汇总统计（不在 worker 内改共享状态）。
+    Process a single character: query data -> download each source icon -> save.
+    Returns a result dict for the main thread to aggregate (workers do not mutate shared state).
     """
     result = {"name": name, "api_fail": False}
 
@@ -82,7 +81,7 @@ def process_character(name: str, session: requests.Session) -> dict:
             result[tag] = "fail"
             continue
 
-        save_path = os.path.join(OUTPUT_DIR, label, f"{name}.png")
+        save_path = os.path.join(RAW_DIR, label, f"{name}.png")
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         try:
             with open(save_path, "wb") as f:
@@ -96,14 +95,14 @@ def process_character(name: str, session: requests.Session) -> dict:
 
 def main():
     print("=" * 55)
-    print("  原神角色头像下载工具")
+    print("  Genshin Impact Character Avatar Downloader")
     print("=" * 55)
 
     names = read_character_names()
     total = len(names)
-    print(f"\n共 {total} 个角色，并发 {MAX_WORKERS}\n")
+    print(f"\n{total} characters, concurrency {MAX_WORKERS}\n")
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(RAW_DIR, exist_ok=True)
 
     stats = {"mihoyo_ok": 0, "mihoyo_fail": 0, "hoyowiki_ok": 0, "hoyowiki_fail": 0, "api_fail": 0}
     session = make_session(pool_maxsize=MAX_WORKERS * 2)
@@ -120,7 +119,7 @@ def main():
 
             if result.get("api_fail"):
                 stats["api_fail"] += 1
-                tags = "[API 无响应]"
+                tags = "[API no response]"
             else:
                 parts = []
                 for _, _, tag in ICON_SOURCES:
@@ -130,20 +129,20 @@ def main():
                         parts.append(f"[{tag} OK]")
                     elif outcome == "fail":
                         stats[f"{tag}_fail"] += 1
-                        parts.append(f"[{tag} 失败]")
+                        parts.append(f"[{tag} FAIL]")
                     elif outcome == "save_fail":
-                        parts.append(f"[{tag} 保存失败]")
-                tags = " ".join(parts) if parts else "[无图标]"
+                        parts.append(f"[{tag} SAVE FAIL]")
+                tags = " ".join(parts) if parts else "[no icon]"
 
             with print_lock:
                 print(f"[{done}/{total}] {name:<30s} {tags}")
 
     print(f"\n{'=' * 55}")
-    print("  完成！")
-    print(f"  mihoyo_icon 成功: {stats['mihoyo_ok']}  失败: {stats['mihoyo_fail']}")
-    print(f"  hoyowiki_icon 成功: {stats['hoyowiki_ok']}  失败: {stats['hoyowiki_fail']}")
-    print(f"  API 无响应: {stats['api_fail']}")
-    print(f"  输出目录: {OUTPUT_DIR}")
+    print("  Done!")
+    print(f"  mihoyo_icon ok: {stats['mihoyo_ok']}  fail: {stats['mihoyo_fail']}")
+    print(f"  hoyowiki_icon ok: {stats['hoyowiki_ok']}  fail: {stats['hoyowiki_fail']}")
+    print(f"  API no response: {stats['api_fail']}")
+    print(f"  Output dir: {RAW_DIR}")
     print(f"{'=' * 55}")
 
 

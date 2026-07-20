@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-原神角色头像自动化工具 — 总入口
-─────────────────────────────
-流程:
-  1. 从 genshin-db API 拉取全部角色原始头像
-  2. 按 mihoyo 优先 → hoyoverse 兜底整合为 avatars_all
-  3. 可选：拉取临时链接（sandrone / lohen 等来自 Fandom）
-  4. 可选：圆形裁剪 → output/cropped/
+Genshin Impact character avatar automation tool - main entry point.
+
+Flow:
+  1. Fetch all raw character avatars from the genshin-db API
+  2. Merge into avatars_all (mihoyo first -> hoyoverse fallback)
+  3. Optional: fetch temporary links (sandrone / lohen etc. from Fandom)
+  4. Optional: circle crop -> output/cropped/
 """
 
 import os
@@ -18,40 +17,40 @@ import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import BASE_DIR, OUTPUT_DIR, FALLBACK_FILE, read_character_names
+from common import BASE_DIR, OUTPUT_DIR, RAW_DIR, CROPPED_DIR, FALLBACK_FILE, read_character_names
 
 FETCH_SCRIPT = os.path.join(BASE_DIR, "fetch_avatars.py")
 CROP_SCRIPT = os.path.join(BASE_DIR, "crop_circle.py")
 
 
 def run_script(script: str) -> int:
-    """以当前解释器运行子脚本，返回退出码。"""
+    """Run a sub-script with the current interpreter, returning its exit code."""
     return subprocess.run([sys.executable, script]).returncode
 
 
 def confirm(prompt: str) -> bool:
-    """询问用户 yes/no，默认 no"""
+    """Ask the user yes/no, defaulting to no."""
     while True:
         answer = input(f"{prompt} [y/N] ").strip().lower()
         if answer in ("y", "yes"):
             return True
         if answer in ("", "n", "no"):
             return False
-        print("  请输入 y 或 n")
+        print("  Please enter y or n")
 
 
 def merge_raw_icons():
-    """将 domain 分目录的原始头像整合到 avatars_all（mihoyo 优先）"""
-    print("\n── 整合原始头像到 avatars_all ──")
+    """Merge raw avatars from per-domain dirs into avatars_all (mihoyo first)."""
+    print("\n-- Merging raw avatars into avatars_all --")
 
     src_dirs = {
-        "upload-os-bbs_mihoyo_com": os.path.join(OUTPUT_DIR, "upload-os-bbs_mihoyo_com"),
-        "upload-static_hoyoverse_com": os.path.join(OUTPUT_DIR, "upload-static_hoyoverse_com"),
+        "upload-os-bbs_mihoyo_com": os.path.join(RAW_DIR, "upload-os-bbs_mihoyo_com"),
+        "upload-static_hoyoverse_com": os.path.join(RAW_DIR, "upload-static_hoyoverse_com"),
     }
-    dst_dir = os.path.join(OUTPUT_DIR, "avatars_all")
+    dst_dir = os.path.join(RAW_DIR, "avatars_all")
     os.makedirs(dst_dir, exist_ok=True)
 
-    # 收集所有角色名
+    # Collect all character names
     all_names = set()
     for d in src_dirs.values():
         if os.path.isdir(d):
@@ -59,7 +58,7 @@ def merge_raw_icons():
                 if f.endswith(".png"):
                     all_names.add(f)
 
-    # mihoyo 优先拷贝
+    # Copy with mihoyo priority
     for name in sorted(all_names):
         src = os.path.join(src_dirs["upload-os-bbs_mihoyo_com"], name)
         if not os.path.isfile(src):
@@ -67,24 +66,24 @@ def merge_raw_icons():
         dst = os.path.join(dst_dir, name)
         shutil.copy2(src, dst)
 
-    print(f"  完成：{len(all_names)} 个头像已整合到 avatars_all")
+    print(f"  Done: {len(all_names)} avatars merged into avatars_all")
 
 
 def fetch_fallback():
-    """从 fallback_urls.json 下载临时链接的角色头像"""
-    print("\n── 拉取临时链接 ──")
+    """Download character avatars from temporary links in fallback_urls.json."""
+    print("\n-- Fetching temporary links --")
 
     if not os.path.isfile(FALLBACK_FILE):
-        print("  未找到 fallback_urls.json，跳过")
+        print("  fallback_urls.json not found, skipping")
         return
 
     with open(FALLBACK_FILE, encoding="utf-8") as f:
         fallbacks = json.load(f)
 
-    # 过滤非角色条目
+    # Filter out non-character entries
     urls = {k: v for k, v in fallbacks.items() if not k.startswith("_")}
     if not urls:
-        print("  无有效链接，跳过")
+        print("  No valid links, skipping")
         return
 
     from PIL import Image
@@ -96,74 +95,78 @@ def fetch_fallback():
 
         img_data = download_and_verify(url, timeout=15)
         if img_data is None:
-            print("下载失败或无效图片")
+            print("download failed or invalid image")
             continue
 
-        # 保存到 output/upload-static_hoyoverse_com/（作为第三方来源）
-        save_global = os.path.join(OUTPUT_DIR, HOYOWIKI_LABEL, f"{name}.png")
+        # Save to output/upload-static_hoyoverse_com/ (as a third-party source)
+        save_global = os.path.join(RAW_DIR, HOYOWIKI_LABEL, f"{name}.png")
         os.makedirs(os.path.dirname(save_global), exist_ok=True)
         with open(save_global, "wb") as f:
             f.write(img_data)
         print(f"OK ({len(img_data)} bytes)")
 
-        # 修复可能的 WebP 等非 PNG 编码
+        # Fix possible non-PNG encodings such as WebP
         img = Image.open(save_global)
         if img.format != "PNG":
             img.save(save_global, format="PNG")
 
-    print("  临时链接拉取完成（重新整合 avatars_all）")
+    print("  Temporary links fetched (re-merging avatars_all)")
 
 
 def main():
     print("=" * 55)
-    print("   原神角色头像自动化工具")
+    print("   Genshin Impact Character Avatar Automation Tool")
     print("   API: github.com/theBowja/genshin-db-api")
     print("=" * 55)
-    print(f"\n角色列表: data/character_names.txt ({len(read_character_names())} 个角色)")
-    print(f"输出目录: {OUTPUT_DIR}/")
-    print("  ├── avatars_all/        原始方形（整合版，mihoyo 优先）")
-    print("  ├── upload-os-bbs_mihoyo_com/  米游社源")
-    print("  ├── upload-static_hoyoverse_com/  HoYoWiki 源")
-    print("  └── cropped/               圆形裁剪版（可选）")
+    print(f"\nCharacter list: data/character_names.txt ({len(read_character_names())} characters)")
+    print(f"Output dir: {OUTPUT_DIR}/")
+    print("  |-- raw/                                raw squares")
+    print("  |   |-- avatars_all/                    merged (mihoyo first)")
+    print("  |   |-- upload-os-bbs_mihoyo_com/        Miyoushe source")
+    print("  |   \\-- upload-static_hoyoverse_com/     HoYoWiki source")
+    print("  \\-- cropped/                            circle-cropped (optional)")
+    print("      |-- avatars_all/                    merged (mihoyo first)")
+    print("      |-- upload-os-bbs_mihoyo_com/        Miyoushe source")
+    print("      \\-- upload-static_hoyoverse_com/     HoYoWiki source")
 
-    # ── 步骤 1：拉取 ──
+    # -- Step 1: fetch --
     print("\n" + "=" * 55)
-    print("步骤 1/3：从 genshin-db API 拉取角色头像")
+    print("Step 1/3: fetch character avatars from the genshin-db API")
     print("=" * 55)
-    if confirm("开始拉取？"):
+    if confirm("Start fetching?"):
         if run_script(FETCH_SCRIPT) != 0:
-            print("\n⚠ 拉取过程出现错误，继续后续步骤")
+            print("\n[!] Errors occurred during fetching, continuing with next steps")
     else:
-        print("  跳过")
+        print("  Skipped")
 
-    # ── 整合 ──
+    # -- Merge --
     merge_raw_icons()
 
-    # ── 步骤 2：临时链接 ──
+    # -- Step 2: temporary links --
     print("\n" + "=" * 55)
-    print("步骤 2/3：拉取临时链接（sandrone / lohen 等 Fandom 来源）")
+    print("Step 2/3: fetch temporary links (sandrone / lohen etc. from Fandom)")
     print("=" * 55)
-    if confirm("拉取临时链接？"):
+    if confirm("Fetch temporary links?"):
         fetch_fallback()
-        merge_raw_icons()  # 重新整合
+        merge_raw_icons()  # re-merge
     else:
-        print("  跳过")
+        print("  Skipped")
 
-    # ── 步骤 3：裁剪 ──
+    # -- Step 3: crop --
     print("\n" + "=" * 55)
-    print("步骤 3/3：圆形裁剪 → output/cropped/")
+    print("Step 3/3: circle crop -> output/cropped/")
     print("=" * 55)
-    if confirm("执行圆形裁剪？"):
+    if confirm("Run circle crop?"):
         if run_script(CROP_SCRIPT) != 0:
-            print("\n⚠ 裁剪过程出现错误")
+            print("\n[!] Errors occurred during cropping")
     else:
-        print("  跳过")
+        print("  Skipped")
 
-    # 完成
+    # Done
     print("\n" + "=" * 55)
-    print("  全部完成！")
-    print(f"  原始方形: {OUTPUT_DIR}/avatars_all/")
-    print(f"  圆形裁剪: {os.path.join(OUTPUT_DIR, 'cropped', 'avatars_all')}/")
+    print("  All done!")
+    print(f"  Raw square: {os.path.join(RAW_DIR, 'avatars_all')}/")
+    print(f"  Circle-cropped: {os.path.join(CROPPED_DIR, 'avatars_all')}/")
     print("=" * 55)
 
 

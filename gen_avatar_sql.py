@@ -3,7 +3,7 @@ import re
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# 主项目 server 与 character-avatars 平级，位于 GINote/ 下
+# The main project server sits alongside character-avatars, under GINote/
 DB_DIR = os.path.normpath(
     os.path.join(BASE_DIR, '..', 'gi-note-server', 'src', 'main', 'resources', 'db')
 )
@@ -11,11 +11,15 @@ DB_DIR = os.path.normpath(
 with open(os.path.join(BASE_DIR, 'avatar_mapping.json'), encoding='utf-8') as f:
     mapping = json.load(f)
 
-seedpath = os.path.join(DB_DIR, 'seed.sql')
-if not os.path.isfile(seedpath):
-    raise SystemExit(f'找不到 seed.sql: {seedpath}\n请确认主项目路径（GINote/gi-note-server）。')
-# UUID 迁移后 id 为 md5('character:ABBR')::uuid，不再是整数。
-# 用 abbr 作为定位键（seed 里 id 本身也由 abbr 派生），name 用于查映射。
+seed_path = os.path.join(DB_DIR, 'seed.sql')
+if not os.path.isfile(seed_path):
+    raise SystemExit(
+        f'seed.sql not found: {seed_path}\n'
+        f'Please confirm the main project path (GINote/gi-note-server).'
+    )
+# After the UUID migration, id is md5('character:ABBR')::uuid, no longer an integer.
+# Use abbr as the lookup key (id in seed is itself derived from abbr); name is used
+# for the mapping lookup.
 pattern = re.compile(
     r"INSERT INTO characters \(id, name, abbr, rarity, release_date, status\) VALUES "
     r"\([^,]+, '([^']+)', '([^']+)',"
@@ -23,13 +27,17 @@ pattern = re.compile(
 
 # abbr -> name
 chars = {}
-with open(seedpath, encoding='utf-8') as f:
+with open(seed_path, encoding='utf-8') as f:
     for line in f:
         m = pattern.search(line)
         if m:
             chars[m.group(2)] = m.group(1)
 
-lines = ['-- avatar_url 写入脚本', '-- 图片存储路径: E:\\ _Image_Hosting\\uploads\\genshin-impact\\', '']
+lines = [
+    '-- avatar_url update script',
+    '-- Image storage path: E:\\ _Image_Hosting\\uploads\\genshin-impact\\',
+    '',
+]
 matched = 0
 unmatched = []
 
@@ -43,16 +51,16 @@ for abbr in sorted(chars.keys()):
         unmatched.append(cname)
 
 lines.append('')
-lines.append(f'-- 匹配成功: {matched}')
-lines.append(f'-- 匹配失败: {len(unmatched)}')
+lines.append(f'-- Matched: {matched}')
+lines.append(f'-- Unmatched: {len(unmatched)}')
 for n in unmatched:
     lines.append(f'--   {n}')
 
-outpath = os.path.join(DB_DIR, 'update_avatar_url.sql')
-with open(outpath, 'w', encoding='utf-8') as f:
+output_path = os.path.join(DB_DIR, 'update_avatar_url.sql')
+with open(output_path, 'w', encoding='utf-8') as f:
     f.write('\n'.join(lines))
 
-print(f'Generated: {outpath}')
+print(f'Generated: {output_path}')
 print(f'Matched: {matched}, Unmatched: {len(unmatched)}')
 if unmatched:
     print(f'Unmatched: {unmatched}')

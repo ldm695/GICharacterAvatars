@@ -1,37 +1,38 @@
-# -*- coding: utf-8 -*-
 """
-角色头像圆形裁剪工具
-- 读取 output/ 目录的原始方形 PNG
-- 裁剪为圆形 PNG
-- 输出到 output/cropped/
+Character avatar circle cropping tool.
+- Read raw square PNGs from the output/ directory
+- Crop to circular PNGs
+- Output to output/cropped/
 """
 
 import os
 from io import BytesIO
 from PIL import Image, ImageDraw
 
-from common import AVATARS_ALL, HOYOWIKI_LABEL, MIHOYO_LABEL, OUTPUT_DIR as OUT_DIR
+from common import AVATARS_ALL, HOYOWIKI_LABEL, MIHOYO_LABEL, RAW_DIR, CROPPED_DIR
 
-# ===== 配置 =====
-# 圆形 mask 超采样倍数，用于抗锯齿（越大边缘越平滑，越耗内存）
+# ===== Config =====
+# Supersample factor for the circular mask, used for antialiasing
+# (larger = smoother edges, more memory).
 SUPERSAMPLE = 4
 
-# 源（原始文件）
-SRC_ALL = os.path.join(OUT_DIR, AVATARS_ALL)
-SRC_MIHOYO = os.path.join(OUT_DIR, MIHOYO_LABEL)
-SRC_HOYOWIKI = os.path.join(OUT_DIR, HOYOWIKI_LABEL)
+# Sources (raw files)
+SRC_ALL = os.path.join(RAW_DIR, AVATARS_ALL)
+SRC_MIHOYO = os.path.join(RAW_DIR, MIHOYO_LABEL)
+SRC_HOYOWIKI = os.path.join(RAW_DIR, HOYOWIKI_LABEL)
 
-# 目标（裁剪后）
-CROP_DIR = os.path.join(OUT_DIR, "cropped")
+# Targets (after cropping)
+CROP_DIR = CROPPED_DIR
 DST_ALL = os.path.join(CROP_DIR, AVATARS_ALL)
 DST_MIHOYO = os.path.join(CROP_DIR, MIHOYO_LABEL)
 DST_HOYOWIKI = os.path.join(CROP_DIR, HOYOWIKI_LABEL)
 
 
 def crop_circle(img_data: bytes) -> BytesIO:
-    """将方形 PNG 裁剪为圆形，保留 RGBA 透明背景。
+    """Crop a square PNG into a circle, preserving the RGBA transparent background.
 
-    mask 以 SUPERSAMPLE 倍尺寸绘制后用 LANCZOS 缩回，消除圆形边缘锯齿。
+    The mask is drawn at SUPERSAMPLE times the size then downscaled with LANCZOS
+    to remove aliasing on the circular edge.
     """
     img = Image.open(BytesIO(img_data)).convert("RGBA")
     size = min(img.size)
@@ -55,9 +56,9 @@ def crop_circle(img_data: bytes) -> BytesIO:
 
 
 def process_dir(src_dir: str, dst_dir: str, label: str) -> tuple[int, int]:
-    """处理一个目录下的所有 PNG，返回 (成功, 失败)"""
+    """Process all PNGs in a directory, returning (ok, fail)."""
     if not os.path.isdir(src_dir):
-        print(f"  [{label}] 源目录不存在: {src_dir}")
+        print(f"  [{label}] source dir not found: {src_dir}")
         return (0, 0)
 
     os.makedirs(dst_dir, exist_ok=True)
@@ -76,7 +77,7 @@ def process_dir(src_dir: str, dst_dir: str, label: str) -> tuple[int, int]:
                 f.write(circle_buf.getvalue())
             ok += 1
         except Exception as e:
-            print(f"    [{label}] {filename}: 裁剪失败 — {e}")
+            print(f"    [{label}] {filename}: crop failed - {e}")
             fail += 1
 
     return (ok, fail)
@@ -84,7 +85,7 @@ def process_dir(src_dir: str, dst_dir: str, label: str) -> tuple[int, int]:
 
 def main():
     print("=" * 50)
-    print("  角色头像圆形裁剪工具")
+    print("  Character Avatar Circle Cropping Tool")
     print("=" * 50)
 
     tasks = [
@@ -95,15 +96,15 @@ def main():
 
     total_ok = total_fail = 0
     for src, dst, label in tasks:
-        print(f"\n处理 [{label}] ...")
+        print(f"\nProcessing [{label}] ...")
         ok, fail = process_dir(src, dst, label)
         total_ok += ok
         total_fail += fail
-        print(f"  -> {ok} 成功, {fail} 失败")
+        print(f"  -> {ok} ok, {fail} fail")
 
     print(f"\n{'=' * 50}")
-    print(f"  完成！总计 {total_ok} 成功, {total_fail} 失败")
-    print(f"  输出目录: {CROP_DIR}")
+    print(f"  Done! Total {total_ok} ok, {total_fail} fail")
+    print(f"  Output dir: {CROP_DIR}")
     print(f"{'=' * 50}")
 
 
