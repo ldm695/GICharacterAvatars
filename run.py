@@ -14,15 +14,19 @@ import os
 import sys
 import json
 import shutil
+import subprocess
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-sys.path.insert(0, BASE_DIR)
+from common import BASE_DIR, OUTPUT_DIR, FALLBACK_FILE, read_character_names
 
 FETCH_SCRIPT = os.path.join(BASE_DIR, "fetch_avatars.py")
 CROP_SCRIPT = os.path.join(BASE_DIR, "crop_circle.py")
-FALLBACK_FILE = os.path.join(BASE_DIR, "data", "fallback_urls.json")
+
+
+def run_script(script: str) -> int:
+    """以当前解释器运行子脚本，返回退出码。"""
+    return subprocess.run([sys.executable, script]).returncode
 
 
 def confirm(prompt: str) -> bool:
@@ -83,41 +87,29 @@ def fetch_fallback():
         print("  无有效链接，跳过")
         return
 
-    import requests
-    from io import BytesIO
     from PIL import Image
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    }
+    from common import HOYOWIKI_LABEL, download_and_verify
 
     for name, url in urls.items():
         print(f"  {name}: ", end="", flush=True)
-        try:
-            resp = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
-            if resp.status_code != 200:
-                print(f"HTTP {resp.status_code}")
-                continue
 
-            # 验证图片
-            try:
-                Image.open(BytesIO(resp.content)).verify()
-            except Exception:
-                print("无效图片")
-                continue
+        img_data = download_and_verify(url, timeout=15)
+        if img_data is None:
+            print("下载失败或无效图片")
+            continue
 
-            # 保存到 output/upload-static_hoyoverse_com/（作为第三方来源）
-            save_global = os.path.join(OUTPUT_DIR, "upload-static_hoyoverse_com", f"{name}.png")
-            os.makedirs(os.path.dirname(save_global), exist_ok=True)
-            with open(save_global, "wb") as f:
-                f.write(resp.content)
-            print(f"OK ({len(resp.content)} bytes)")
-            # 修复可能的 WebP 后缀
-            img = Image.open(save_global)
-            if img.format != "PNG":
-                img.save(save_global, format="PNG")
-        except Exception as e:
-            print(f"失败 — {e}")
+        # 保存到 output/upload-static_hoyoverse_com/（作为第三方来源）
+        save_global = os.path.join(OUTPUT_DIR, HOYOWIKI_LABEL, f"{name}.png")
+        os.makedirs(os.path.dirname(save_global), exist_ok=True)
+        with open(save_global, "wb") as f:
+            f.write(img_data)
+        print(f"OK ({len(img_data)} bytes)")
+
+        # 修复可能的 WebP 等非 PNG 编码
+        img = Image.open(save_global)
+        if img.format != "PNG":
+            img.save(save_global, format="PNG")
 
     print("  临时链接拉取完成（重新整合 avatars_all）")
 
@@ -127,20 +119,19 @@ def main():
     print("   原神角色头像自动化工具")
     print("   API: github.com/theBowja/genshin-db-api")
     print("=" * 55)
-    print(f"\n角色列表: data/character_names.txt ({sum(1 for _ in open(os.path.join(BASE_DIR, 'data', 'character_names.txt'), encoding='utf-8') if _.strip())} 个角色)")
+    print(f"\n角色列表: data/character_names.txt ({len(read_character_names())} 个角色)")
     print(f"输出目录: {OUTPUT_DIR}/")
-    print(f"  ├── avatars_all/        原始方形（整合版，mihoyo 优先）")
-    print(f"  ├── upload-os-bbs_mihoyo_com/  米游社源")
-    print(f"  ├── upload-static_hoyoverse_com/  HoYoWiki 源")
-    print(f"  └── cropped/               圆形裁剪版（可选）")
+    print("  ├── avatars_all/        原始方形（整合版，mihoyo 优先）")
+    print("  ├── upload-os-bbs_mihoyo_com/  米游社源")
+    print("  ├── upload-static_hoyoverse_com/  HoYoWiki 源")
+    print("  └── cropped/               圆形裁剪版（可选）")
 
     # ── 步骤 1：拉取 ──
     print("\n" + "=" * 55)
     print("步骤 1/3：从 genshin-db API 拉取角色头像")
     print("=" * 55)
     if confirm("开始拉取？"):
-        ret = os.system(f'"{sys.executable}" "{FETCH_SCRIPT}"')
-        if ret != 0:
+        if run_script(FETCH_SCRIPT) != 0:
             print("\n⚠ 拉取过程出现错误，继续后续步骤")
     else:
         print("  跳过")
@@ -163,8 +154,7 @@ def main():
     print("步骤 3/3：圆形裁剪 → output/cropped/")
     print("=" * 55)
     if confirm("执行圆形裁剪？"):
-        ret = os.system(f'"{sys.executable}" "{CROP_SCRIPT}"')
-        if ret != 0:
+        if run_script(CROP_SCRIPT) != 0:
             print("\n⚠ 裁剪过程出现错误")
     else:
         print("  跳过")

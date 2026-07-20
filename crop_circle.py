@@ -10,33 +10,40 @@ import os
 from io import BytesIO
 from PIL import Image, ImageDraw
 
+from common import AVATARS_ALL, HOYOWIKI_LABEL, MIHOYO_LABEL, OUTPUT_DIR as OUT_DIR
+
 # ===== 配置 =====
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.path.join(BASE_DIR, "output")
+# 圆形 mask 超采样倍数，用于抗锯齿（越大边缘越平滑，越耗内存）
+SUPERSAMPLE = 4
 
 # 源（原始文件）
-SRC_ALL = os.path.join(OUT_DIR, "avatars_all")
-SRC_MIHOYO = os.path.join(OUT_DIR, "upload-os-bbs_mihoyo_com")
-SRC_HOYOWIKI = os.path.join(OUT_DIR, "upload-static_hoyoverse_com")
+SRC_ALL = os.path.join(OUT_DIR, AVATARS_ALL)
+SRC_MIHOYO = os.path.join(OUT_DIR, MIHOYO_LABEL)
+SRC_HOYOWIKI = os.path.join(OUT_DIR, HOYOWIKI_LABEL)
 
 # 目标（裁剪后）
 CROP_DIR = os.path.join(OUT_DIR, "cropped")
-DST_ALL = os.path.join(CROP_DIR, "avatars_all")
-DST_MIHOYO = os.path.join(CROP_DIR, "upload-os-bbs_mihoyo_com")
-DST_HOYOWIKI = os.path.join(CROP_DIR, "upload-static_hoyoverse_com")
+DST_ALL = os.path.join(CROP_DIR, AVATARS_ALL)
+DST_MIHOYO = os.path.join(CROP_DIR, MIHOYO_LABEL)
+DST_HOYOWIKI = os.path.join(CROP_DIR, HOYOWIKI_LABEL)
 
 
 def crop_circle(img_data: bytes) -> BytesIO:
-    """将方形 PNG 裁剪为圆形，保留 RGBA 透明背景"""
+    """将方形 PNG 裁剪为圆形，保留 RGBA 透明背景。
+
+    mask 以 SUPERSAMPLE 倍尺寸绘制后用 LANCZOS 缩回，消除圆形边缘锯齿。
+    """
     img = Image.open(BytesIO(img_data)).convert("RGBA")
     size = min(img.size)
     left = (img.width - size) // 2
     top = (img.height - size) // 2
     img = img.crop((left, top, left + size, top + size))
 
-    mask = Image.new("L", (size, size), 0)
+    big = size * SUPERSAMPLE
+    mask = Image.new("L", (big, big), 0)
     draw = ImageDraw.Draw(mask)
-    draw.ellipse((0, 0, size, size), fill=255)
+    draw.ellipse((0, 0, big, big), fill=255)
+    mask = mask.resize((size, size), Image.LANCZOS)
 
     result = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     result.paste(img, (0, 0), mask)
