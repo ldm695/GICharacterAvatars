@@ -44,7 +44,7 @@ def crop_circle(img_data: bytes) -> BytesIO:
     mask = Image.new("L", (big, big), 0)
     draw = ImageDraw.Draw(mask)
     draw.ellipse((0, 0, big, big), fill=255)
-    mask = mask.resize((size, size), Image.LANCZOS)
+    mask = mask.resize((size, size), Image.Resampling.LANCZOS)
 
     result = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     result.paste(img, (0, 0), mask)
@@ -59,7 +59,7 @@ def process_dir(src_dir: str, dst_dir: str, label: str) -> tuple[int, int]:
     """Process all PNGs in a directory, returning (ok, fail)."""
     if not os.path.isdir(src_dir):
         print(f"  [{label}] source dir not found: {src_dir}")
-        return (0, 0)
+        return 0, 0
 
     os.makedirs(dst_dir, exist_ok=True)
     ok = fail = 0
@@ -76,11 +76,11 @@ def process_dir(src_dir: str, dst_dir: str, label: str) -> tuple[int, int]:
             with open(dst_path, "wb") as f:
                 f.write(circle_buf.getvalue())
             ok += 1
-        except Exception as e:
+        except (OSError, SyntaxError, ValueError) as e:
             print(f"    [{label}] {filename}: crop failed - {e}")
             fail += 1
 
-    return (ok, fail)
+    return ok, fail
 
 
 def main():

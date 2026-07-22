@@ -45,6 +45,7 @@ for abbr in sorted(chars.keys()):
     cname = chars[abbr]
     icon_key = mapping.get(cname)
     if icon_key:
+        # noinspection SqlNoDataSourceInspection
         lines.append(f"UPDATE characters SET avatar_url = ARRAY['/images/genshin-impact/{icon_key}.png', '']::text[] WHERE abbr = '{abbr}';")
         matched += 1
     else:

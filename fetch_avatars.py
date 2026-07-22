@@ -53,7 +53,7 @@ def fetch_character_data(name: str, session: requests.Session) -> dict | None:
                 data = resp.json()
                 if data and data.get("images"):
                     return data
-        except Exception:
+        except (requests.RequestException, ValueError):
             continue
     return None
 
@@ -73,7 +73,7 @@ def process_character(name: str, session: requests.Session) -> dict:
     images = data.get("images", {})
     for key, label, tag in ICON_SOURCES:
         url = images.get(key)
-        if not url:
+        if not isinstance(url, str) or not url:
             continue
 
         img_data = download_and_verify(url, session)
@@ -87,7 +87,7 @@ def process_character(name: str, session: requests.Session) -> dict:
             with open(save_path, "wb") as f:
                 f.write(img_data)
             result[tag] = "ok"
-        except Exception:
+        except OSError:
             result[tag] = "save_fail"
 
     return result

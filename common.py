@@ -9,6 +9,7 @@ import os
 from io import BytesIO
 
 import requests
+from requests.adapters import HTTPAdapter
 from PIL import Image
 
 # ===== Paths =====
@@ -41,7 +42,7 @@ def make_session(pool_maxsize: int = 16) -> requests.Session:
     """Create a Session with connection pooling for shared concurrent downloads."""
     session = requests.Session()
     session.headers.update(API_HEADERS)
-    adapter = requests.adapters.HTTPAdapter(
+    adapter = HTTPAdapter(
         pool_connections=pool_maxsize, pool_maxsize=pool_maxsize
     )
     session.mount("https://", adapter)
@@ -75,7 +76,7 @@ def download_and_verify(
             return None
         try:
             Image.open(BytesIO(resp.content)).verify()
-        except Exception:
+        except (OSError, SyntaxError, ValueError):
             return None
         return resp.content
     except requests.RequestException:
